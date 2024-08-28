@@ -1,0 +1,47 @@
+name: Trigger auto deployment for cont2808
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - 'result/**'
+    - '.github/workflows/cont2808-AutoDeployTrigger-c1840d35-8122-41e2-b3c7-e88d043b9c09.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.CONT2808_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CONT2808_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CONT2808_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/result 
+          registryUrl: testerregistry.azurecr.io
+          registryUsername: ${{ secrets.CONT2808_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.CONT2808_REGISTRY_PASSWORD }}
+          containerAppName: cont2808
+          resourceGroup: OGFs244-2608-gayathri
+          imageToBuild: testerregistry.azurecr.io/cont2808:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
