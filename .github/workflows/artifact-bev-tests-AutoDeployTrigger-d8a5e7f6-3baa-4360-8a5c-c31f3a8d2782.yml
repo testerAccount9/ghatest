@@ -1,0 +1,48 @@
+name: Trigger auto deployment for artifact-bev-tests
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/artifact-bev-tests-AutoDeployTrigger-d8a5e7f6-3baa-4360-8a5c-c31f3a8d2782.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ARTIFACTBEVTESTS_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARTIFACTBEVTESTS_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.ARTIFACTBEVTESTS_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/result
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: cafee2f04678acr.azurecr.io
+          registryUsername: ${{ secrets.ARTIFACTBEVTESTS_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.ARTIFACTBEVTESTS_REGISTRY_PASSWORD }}
+          containerAppName: artifact-bev-tests
+          resourceGroup: addon-rg
+          imageToBuild: cafee2f04678acr.azurecr.io/artifact-bev-tests:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
