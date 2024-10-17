@@ -1,0 +1,48 @@
+name: Trigger auto deployment for aca-app-deployment-local
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/aca-app-deployment-local-AutoDeployTrigger-d8978dcf-b9f8-4b0b-a6f3-b2c1db2c70d5.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ACAAPPDEPLOYMENTLOCAL_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.ACAAPPDEPLOYMENTLOCAL_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.ACAAPPDEPLOYMENTLOCAL_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/result
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: ca07fce56c64acr.azurecr.io
+          registryUsername: ${{ secrets.ACAAPPDEPLOYMENTLOCAL_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.ACAAPPDEPLOYMENTLOCAL_REGISTRY_PASSWORD }}
+          containerAppName: aca-app-deployment-local
+          resourceGroup: e2e
+          imageToBuild: ca07fce56c64acr.azurecr.io/aca-app-deployment-local:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
