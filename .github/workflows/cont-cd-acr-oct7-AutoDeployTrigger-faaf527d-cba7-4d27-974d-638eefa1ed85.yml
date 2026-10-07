@@ -1,0 +1,49 @@
+name: Trigger auto deployment for cont-cd-acr-oct7
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ testbranch ]
+    paths:
+    - '**'
+    - '.github/workflows/cont-cd-acr-oct7-AutoDeployTrigger-faaf527d-cba7-4d27-974d-638eefa1ed85.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.CONTCDACROCT7_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CONTCDACROCT7_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CONTCDACROCT7_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: acaregistry.azurecr.io
+          registryUsername: ${{ secrets.CONTCDACROCT7_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.CONTCDACROCT7_REGISTRY_PASSWORD }}
+          containerAppName: cont-cd-acr-oct7
+          resourceGroup: rgcont-oct7
+          imageToBuild: acaregistry.azurecr.io/cont-cd-acr-oct7:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
